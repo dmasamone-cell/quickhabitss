@@ -1,11 +1,13 @@
 {
-  "name": "Improve Your Habits",
-  "short_name": "Habits",
+  "name": "Quick Habits",
+  "short_name": "quickhabits",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#101012",
   "theme_color": "#101012",
-  "orientation": "portrait",
+  "dir": "ltr",
   "icons": [
     {
       "src": "Https://cdn.phototourl.com/member/2026-10-21-fba244e4-60a3-43e7-9bfd-eb41aaea25e2.jpg",
@@ -15,4 +17,3 @@
     }
   ]
 }
-
