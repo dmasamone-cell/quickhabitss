@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Improve Your Habits</title>
+
+<!-- PWA & Mobile Settings -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#101012">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" href="icon.png">
+
+<!-- CDN Scripts -->
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/framer-motion@10.18.0/dist/framer-motion.js"></script>
+
+<style>
+  :root { --bg:#FAFAFA; --ink:#171717; --muted:#737373; --card:#FFFFFF; --line:#E5E5E5; --accent:#4F46E5; --accent-soft:#EEF2FF;
+    box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#101012; --ink:#F5F5F5; --muted:#A3A3A3; --card:#1A1A1D; --line:#2A2A2E; --accent:#818CF8; --accent-soft:#23233A; } }
+  :root[data-theme="dark"] { --bg:#101012; --ink:#F5F5F5; --muted:#A3A3A3; --card:#1A1A1D; --line:#2A2A2E; --accent:#818CF8; --accent-soft:#23233A; }
+  html { scroll-padding-top:env(safe-area-inset-top,0px); }
+  body { background:var(--bg); color:var(--ink); font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  .card { background:var(--card); border:1px solid var(--line); box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px -12px rgba(0,0,0,.08); }
+  .muted { color:var(--muted); } .accent-bg { background:var(--accent); color:#fff; } .accent-text { color:var(--accent); }
+  .soft { background:var(--accent-soft); } .line { border-color:var(--line); }
+  body { background-image:radial-gradient(60rem 30rem at 0% -10%,rgba(99,102,241,.14),transparent 60%),radial-gradient(50rem 30rem at 100% 0%,rgba(236,72,153,.12),transparent 60%),radial-gradient(40rem 30rem at 50% 110%,rgba(245,158,11,.10),transparent 60%); background-attachment:fixed; }
+  :root { --h0:#EBEDF0; --h1:#9BE9A8; --h2:#40C463; --h3:#30A14E; --h4:#216E39; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --h0:#2A2A2A; --h1:#0E4429; --h2:#006D32; --h3:#26A641; --h4:#39D353; } }
+  :root[data-theme="dark"] { --h0:#2A2A2A; --h1:#0E4429; --h2:#006D32; --h3:#26A641; --h4:#39D353; }
+  input,textarea,select { background:transparent; color:var(--ink); outline:none; }
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .md h1,.md h2 { font-weight:650; font-size:1.15rem; margin:.6rem 0 .3rem; } .md li { margin-left:1.1rem; list-style:disc; } .md p { margin:.3rem 0; }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW reg error:', err));
+  });
+}
+</script>
+
+<script>
+const { useState, useEffect, useRef, useMemo } = React;
+const html = htm.bind(React.createElement);
+
+/* ---------- Framer Motion ---------- */
+const FM = window.Motion || window.Framer || window.FramerMotion || {};
+const strip = ({ initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, variants, ...r }) => r;
+const mk = (tag) => (FM.motion && FM.motion[tag]) || ((p) => React.createElement(tag, strip(p)));
+const M = { div: mk('div'), button: mk('button'), li: mk('li'), span: mk('span') };
+const AP = FM.AnimatePresence || (({ children }) => children);
+const spring = { type: 'spring', stiffness: 420, damping: 24 };
+
+/* ---------- Icons ---------- */
+const P = {
+  check: 'M20 6 9 17l-5-5', plus: 'M5 12h14M12 5v14', trash: 'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
+  home: 'M3 12 12 3l9 9M5 10v10h14V10', timer: 'M12 9v4l2 2M10 2h4M12 5a8 8 0 1 0 0 16 8 8 0 0 0 0-16', book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5',
+  play: 'M7 4l13 8-13 8z', pause: 'M6 4h4v16H6zM14 4h4v16h-4z', reset: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z', pen: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+  download: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
+  sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  moon: 'M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z',
+  flame: 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z'
+};
+const Icon = ({ n, s = 20, fill = 'none' }) => html`<svg width=${s} height=${s} viewBox="0 0 24 24" fill=${fill} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=${P[n]} /></svg>`;
+
+/* ---------- Helpers ---------- */
+const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function useLS(key, init) {
+  const [v, setV] = useState(() => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : init; } catch (e) { return init; } });
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }, [key, v]);
+  return [v, setV];
+}
+const PALETTE = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#8B5CF6', '#EF4444', '#84CC16'];
+const colorOf = (h) => h.color || PALETTE[[...h.id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % PALETTE.length];
+const EMOJI = ['', '💧', '📚', '🏃', '🧘', '🥗', '💤', '✍️', '🎯'];
+const DAYN = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const due = (h, d) => !h.days || h.days.includes(d.getDay());
+const dayStat = (habits, log, d) => { const ids = log[dayKey(d)] || [], list = habits.filter((h) => due(h, d)), done = list.filter((h) => ids.includes(h.id)).length; return { due: list.length, done, pct: list.length ? Math.round((done / list.length) * 100) : 0 }; };
+const SEED = [{ id: 'h1', name: 'Drink water' }, { id: 'h2', name: 'Read 20 pages' }, { id: 'h3', name: 'Stretch for 10 minutes' }, { id: 'h4', name: 'Plan tomorrow' }];
+
+/* ---------- Sheets, Confetti & Stats ---------- */
+function Sheet({ onClose, children }) {
+  return html`<${M.div} className="fixed inset-0 z-40 flex items-end justify-center p-4 md:items-center" initial=${{ opacity: 0 }} animate=${{ opacity: 1 }} exit=${{ opacity: 0 }}>
+    <div className="absolute inset-0 bg-black/40" onClick=${onClose} />
+    <${M.div} className="card relative w-full max-w-md rounded-3xl p-6" initial=${{ y: 40 }} animate=${{ y: 0 }} transition=${spring}>${children}<//>
+  <//>`;
+}
+function HabitSheet({ habit, onSave, onClose }) {
+  const [name, setName] = useState(habit.name), [emoji, setEmoji] = useState(habit.emoji || ''), [days, setDays] = useState(habit.days || [0, 1, 2, 3, 4, 5, 6]), [color, setColor] = useState(colorOf(habit));
+  const tog = (i) => setDays(days.includes(i) ? days.filter((x) => x !== i) : [...days, i].sort());
+  const save = () => onSave({ ...habit, name: name.trim() || habit.name, emoji, color, days: days.length ? days : [0, 1, 2, 3, 4, 5, 6] });
+  return html`<${Sheet} onClose=${onClose}>
+    <h2 className="text-lg font-semibold">Edit habit</h2>
+    <input value=${name} onChange=${(e) => setName(e.target.value)} className="mt-4 w-full rounded-xl border line px-3 py-2.5" />
+    <p className="muted text-xs mt-5">Icon</p>
+    <div className="flex flex-wrap gap-2 mt-2">${EMOJI.map((e) => html`<button key=${e \vert{}\vert{} 'none'} onClick=${() => setEmoji(e)} className="h-9 w-9 rounded-xl border line text-base" style=${emoji === e ? { borderColor: color, background: color + '22' } : {}}>${e || '–'}</button>`)}</div>
+    <p className="muted text-xs mt-5">Repeat on</p>
+    <div className="flex gap-2 mt-2">${DAYN.map((n, i) => html`<button key=${i} onClick=${() => tog(i)} className=${'h-9 w-9 rounded-full text-sm font-medium ' + (days.includes(i) ? 'text-white' : 'muted border line')} style=${days.includes(i) ? { background: color } : {}}>${n}</button>`)}</div>
+    <p className="muted text-xs mt-5">Colour</p>
+    <div className="flex flex-wrap gap-2.5 mt-2">${PALETTE.map((c) => html`<button key=${c} onClick=${() => setColor(c)} className="h-7 w-7 rounded-full" style=${{ background: c, boxShadow: color === c ? '0 0 0 2px var(--card), 0 0 0 4px ' + c : 'none' }} aria-label=${'Colour ' + c} />`)}</div>
+    <div className="flex gap-3 mt-7"><button onClick=${onClose} className="flex-1 rounded-2xl border line py-3 font-medium">Cancel</button><button onClick=${save} className="flex-1 rounded-2xl py-3 font-medium text-white" style=${{ background: color }}>Save</button></div>
+  <//>`;
+}
+function BackupSheet({ data, apply, onClose }) {
+  const [text, setText] = useState(JSON.stringify(data, null, 1)), [msg, setMsg] = useState('');
+  const copy = async () => { try { await navigator.clipboard.writeText(text); setMsg('Copied'); } catch (e) { setMsg('Select text and copy manually'); } };
+  const restore = () => { try { const o = JSON.parse(text); if (!Array.isArray(o.habits)) throw new Error(); apply(o); onClose(); } catch (e) { setMsg('Invalid backup data'); } };
+  return html`<${Sheet} onClose=${onClose}>
+    <h2 className="text-lg font-semibold">Backup and restore</h2>
+    <p className="muted text-sm mt-1">Copy this text to save your data, or paste back to restore.</p>
+    <textarea value=${text} onChange=${(e) => setText(e.target.value)} className="mt-4 h-48 w-full resize-none rounded-xl border line p-3 font-mono text-xs" />
+    <p className="muted mt-2 h-4 text-xs">${msg}</p>
+    <div className="flex gap-3 mt-4"><button onClick=${copy} className="flex-1 rounded-2xl border line py-3 font-medium">Copy</button><button onClick=${restore} className="accent-bg flex-1 rounded-2xl py-3 font-medium">Restore</button></div>
+  <//>`;
+}
+function Confetti({ stamp }) {
+  const [on, setOn] = useState(false);
+  useEffect(() => { if (!stamp || REDUCED) return; setOn(true); const t = setTimeout(() => setOn(false), 1800); return () => clearTimeout(t); }, [stamp]);
+  if (!on) return null;
+  return html`<div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">${Array.from({ length: 44 }, (_, i) => { const a = Math.random() * Math.PI * 2, r = 100 + Math.random() * 240;
+    return html`<${M.span} key=${i} className="absolute left-1/2 top-1/3 block h-2.5 w-2 rounded-sm" style=${{ background: PALETTE[i \% PALETTE.length] }} initial=${{ x: 0, y: 0, opacity: 1, rotate: 0 }} animate=${{ x: Math.cos(a) * r, y: Math.sin(a) * r + 260, opacity: 0, rotate: Math.random() * 720 }} transition=${{ duration: 1.5, ease: 'easeOut' }} />`; })}</div>`;
+}
+function WeekStats({ habits, log }) {
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return { d, ...dayStat(habits, log, d) }; });
+  const best = days.reduce((a, b) => (b.pct > a.pct ? b : a), days[0]);
+  const cons = habits.map((h) => { const dd = days.filter((x) => due(h, x.d)); return { h, t: dd.length, n: dd.filter((x) => (log[dayKey(x.d)] || []).includes(h.id)).length }; }).filter((x) => x.t > 0 && x.n > 0).sort((a, b) => b.n / b.t - a.n / a.t)[0];
+  return html`<div className="card rounded-2xl p-5 mt-4">
+    <div className="flex items-baseline justify-between"><span className="text-sm font-medium">Last 7 days</span><span className="text-sm muted">${Math.round(days.reduce((a, x) => a + x.pct, 0) / 7)}% average</span></div>
+    <div className="flex items-end gap-2 h-20 mt-5">${days.map((x, i) => html`<div key=${i} className="flex h-full flex-1 items-end"><${M.div} className="w-full rounded-lg" initial=${{ height: 0 }} animate=${{ height: Math.max(x.pct, 6) + '%' }} transition=${{ type: 'spring', stiffness: 120, damping: 18, delay: i * .04 }} style=${{ background: x.pct ? colorOf({ id: 'd' + x.d.getDay() }) : 'var(--line)' }} /></div>`)}</div>
+    <div className="flex gap-2 mt-2">${days.map((x, i) => html`<span key=${i} className="muted flex-1 text-center text-[10px]">${x.d.toLocaleDateString('en-US', { weekday: 'narrow' })}</span>`)}</div>
+    ${best.pct > 0 && html`<p className="muted mt-4 text-sm">Best day: ${best.d.toLocaleDateString('en-US', { weekday: 'long' })} at ${best.pct}\%${cons ? '. Most consistent: ' + (cons.h.emoji ? cons.h.emoji + ' ' : '') + cons.h.name + ', ' + cons.n + ' of ' + cons.t + ' days' : ''}.</p>`}
+  </div>`;
+}
+async function notify(title, body) {
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const reg = navigator.serviceWorker && (await navigator.serviceWorker.getRegistration());
+    if (reg) reg.showNotification(title, { body, icon: '/icon.png' }); else new Notification(title, { body });
+  } catch (e) {}
+}
+function Welcome({ onDone }) {
+  const [step, setStep] = useState(0), [name, setName] = useState('');
+  const canNotify = typeof Notification !== 'undefined', n = name.trim();
+  const go = () => { if (!n) return; if (canNotify && Notification.permission === 'default') setStep(1); else onDone(n); };
+  const finish = async (ask) => {
+    if (ask && canNotify) { try { if ((await Notification.requestPermission()) === 'granted') notify('Welcome, ' + n + '!', 'We\u2019ll tell you when a focus session ends.'); } catch (e) {} }
+    onDone(n);
+  };
+  return html`<main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
+    <${AP} mode="wait" initial=${false}>
+      <${M.div} key=${step} initial=${{ opacity: 0, y: 16 }} animate=${{ opacity: 1, y: 0 }} exit=${{ opacity: 0, y: -12 }} transition=${{ duration: .25 }}>
+        ${step === 0 ? html`<div>
+          <h1 className="text-3xl font-bold tracking-tight">Before we continue, what\u2019s your name?</h1>
+          <p className="muted mt-2">We\u2019ll use it to greet you in the app.</p>
+          <input autoFocus=${true} value=${name} onChange=${(e) => setName(e.target.value)} onKeyDown=${(e) => e.key === 'Enter' && go()} placeholder="Your name" className="card mt-8 w-full rounded-2xl px-4 py-3.5 text-lg" />
+          <${M.button} whileHover=${{ scale: 1.02 }} whileTap=${{ scale: .97 }} disabled=${!n} onClick=${go} className="accent-bg mt-4 w-full rounded-2xl py-3.5 font-medium disabled:opacity-40">Continue<//>
+        </div>` : html`<div>
+          <h1 className="text-3xl font-bold tracking-tight">Nice to meet you, ${n}.</h1>
+          <p className="muted mt-2">Allow notifications so we can tell you when a focus session ends.</p>
+          <${M.button} whileHover=${{ scale: 1.02 }} whileTap=${{ scale: .97 }} onClick=${() => finish(true)} className="accent-bg mt-8 w-full rounded-2xl py-3.5 font-medium">Allow notifications<//>
+          <button onClick=${() => finish(false)} className="muted mt-3 w-full rounded-2xl py-3 font-medium">Not now</button>
+        </div>`}
+      <//>
+    <//>
+  </main>`;
+}
+function beep() { try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 660; g.gain.setValueAtTime(.15, c.currentTime); g.gain.exponentialRampToValueAtTime(.001, c.currentTime + .8); o.start(); o.stop(c.currentTime + .8); } catch (e) {} }
+
+/* ---------- Streak & Heatmap ---------- */
+const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function Streak({ habits, log }) {
+  const { current, best, todayDone } = useMemo(() => {
+    const ids = new Set(habits.map((h) => h.id));
+    const on = new Set(Object.keys(log).filter((k) => (log[k] || []).some((id) => ids.has(id))));
+    const todayDone = on.has(dayKey());
+    let current = 0; const d = new Date(); if (!todayDone) d.setDate(d.getDate() - 1);
+    while (on.has(dayKey(d))) { current++; d.setDate(d.getDate() - 1); }
+    let best = 0, run = 0, prev = null;
+    [...on].sort().forEach((k) => {
+      const t = new Date(k + 'T12:00:00');
+      run = prev && Math.round((t - prev) / 864e5) === 1 ? run + 1 : 1;
+      best = Math.max(best, run); prev = t;
+    });
+    return { current, best, todayDone };
+  }, [habits, log]);
+  const lit = todayDone && current > 0, live = lit && !REDUCED;
+  const caption = lit ? 'Best ' + best : current > 0 ? 'Keep it alive' : 'Start today';
+  return html`<div className="card rounded-2xl flex items-center gap-2.5 px-3.5 py-2" title=${'Longest streak: ' + best + (best === 1 ? ' day' : ' days')}>
+    <${M.span} key=${current} className="flex" initial=${{ scale: .6 }}
+      animate=${live ? { scale: [1, 1.12, 1], rotate: [0, -4, 4, 0] } : { scale: 1 }}
+      transition=${live ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : spring}
+      style=${{ color: current > 0 ? '#F97316' : 'var(--muted)', filter: lit ? 'drop-shadow(0 0 6px rgba(249,115,22,.55))' : 'none' }}>
+      <${Icon} n="flame" s=${26} fill=${lit ? 'currentColor' : 'none'} />
+    <//>
+    <div className="leading-tight">
+      <div><span className="text-lg font-semibold tabular-nums">${current}</span> <span className="text-xs muted">${current === 1 ? 'day' : 'days'}</span></div>
+      <div className="muted text-[11px]">${caption}</div>
+    </div>
+  </div>`;
+}
+function Heatmap({ habits, log }) {
+  const [active, setActive] = useState(null);
+  const now = new Date(), y = now.getFullYear(), mo = now.getMonth(), todayKey = dayKey(now);
+  const count = new Date(y, mo + 1, 0).getDate(), offset = new Date(y, mo, 1).getDay();
+  const days = useMemo(() => Array.from({ length: count }, (_, i) => {
+    const d = new Date(y, mo, i + 1), k = dayKey(d);
+    const st = dayStat(habits, log, d);
+    const pct = st.pct;
+    return { d, k, pct, future: k > todayKey, level: pct === 0 ? 0 : pct <= 25 ? 1 : pct <= 50 ? 2 : pct <= 75 ? 3 : 4 };
+  }), [habits, log, y, mo, count, todayKey]);
+  const activeDays = days.filter((x) => x.pct > 0).length;
+  return html`<div className="card rounded-2xl p-5 mt-4">
+    <div className="flex items-baseline justify-between">
+      <span className="text-sm font-medium">${now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+      <span className="text-sm muted">${activeDays} active ${activeDays === 1 ? 'day' : 'days'}</span>
+    </div>
+    <div className="flex gap-2 mt-5" style=${{ '--cell': 'clamp(26px, 7.5vw, 44px)' }}>
+      <div className="grid text-[10px] muted" style=${{ gridTemplateRows: 'repeat(7, var(--cell))', rowGap: 6 }}>
+        ${['', 'Mon', '', 'Wed', '', 'Fri', ''].map((l, i) => html`<span key=${i} className="flex items-center">${l}</span>`)}
+      </div>
+      <div className="grid" style=${{ gridTemplateRows: 'repeat(7, var(--cell))', gridAutoColumns: 'var(--cell)', gridAutoFlow: 'column', gap: 6 }}>
+        ${Array.from({ length: offset }, (_, i) => html`<span key=${'o' + i} />`)}
+        ${days.map((x) => {
+          const on = active === x.k, label = x.d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          return html`<${M.button} key=${x.k} type="button" whileHover=${{ scale: 1.15 }} whileTap=${{ scale: .95 }} transition=${spring}
+            onMouseEnter=${() => setActive(x.k)} onMouseLeave=${() => setActive(null)} onFocus=${() => setActive(x.k)} onBlur=${() => setActive(null)} onClick=${() => setActive(on ? null : x.k)}
+            aria-label=${label + ', ' + x.pct + '% completed'} className="relative rounded-lg"
+            style=${{ background: 'var(--h' + x.level + ')', opacity: x.future ? .45 : 1, zIndex: on ? 20 : 0, boxShadow: x.k === todayKey ? '0 0 0 2px var(--card), 0 0 0 3.5px var(--ink)' : 'none' }}>
+            <${AP}>${on && html`<span key="tip" className="pointer-events-none absolute bottom-full left-1/2 mb-2 block -translate-x-1/2">
+              <${M.span} initial=${{ opacity: 0, y: 4 }} animate=${{ opacity: 1, y: 0 }} exit=${{ opacity: 0 }} transition=${{ duration: .15 }} className="block whitespace-nowrap rounded-xl px-3 py-2 text-left text-xs shadow-md" style=${{ background: 'var(--ink)', color: 'var(--bg)' }}>
+                <span className="block font-semibold">${label}</span><span className="block opacity-70">${x.pct}% completed</span>
+              <//>
+            </span>`}<//>
+          <//>`;
+        })}
+      </div>
+    </div>
+    <div className="flex items-center justify-end gap-1.5 mt-5 text-[11px] muted">
+      <span>Less</span>${[0, 1, 2, 3, 4].map((l) => html`<span key=${l} className="h-3 w-3 rounded" style=${{ background: 'var(--h' + l + ')' }} />`)}<span>More</span>
+    </div>
+  </div>`;
+}
+
+/* ---------- Views ---------- */
+function Dashboard({ habits, setHabits, log, setLog, name }) {
+  const today = dayKey();
+  const done = log[today] || [];
+  const [draft, setDraft] = useState('');
+  const [pick, setPick] = useState(0);
+  const [editing, setEditing] = useState(null);
+  const [boom, setBoom] = useState(0);
+  const dueToday = habits.filter((h) => due(h, new Date())), rest = habits.filter((h) => !due(h, new Date())), pct = dayStat(habits, log, new Date()).pct, eh = habits.find((h) => h.id === editing);
+  const toggle = (id) => {
+    const next = done.includes(id) ? done.filter((x) => x !== id) : [...done, id];
+    if (next.length > done.length && dueToday.length && dueToday.every((h) => next.includes(h.id))) setBoom(Date.now());
+    setLog({ ...log, [today]: next });
+  };
+  const add = () => { const name = draft.trim(); if (!name) return; setHabits([...habits, { id: 'h' + Date.now(), name, color: PALETTE[pick] }]); setDraft(''); };
+  const streak = (id) => { let n = 0; const d = new Date(); if (!(log[dayKey(d)] || []).includes(id)) d.setDate(d.getDate() - 1); while ((log[dayKey(d)] || []).includes(id)) { n++; d.setDate(d.getDate() - 1); } return n; };
+  return html`<div>
+    <p className="muted text-sm">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+    <div className="flex items-center justify-between mt-1">
+      <h1 className="text-3xl font-bold tracking-tight">Hi, ${name || 'there'}</h1>
+      <${Streak} habits=${habits} log=${log} />
+    </div>
+    <div className="card rounded-2xl p-5 mt-6">
+      <div className="flex items-baseline justify-between"><span className="text-sm font-medium">Daily progress</span><span className="text-sm muted">${pct}%</span></div>
+      <div className="h-2.5 rounded-full mt-3 overflow-hidden" style=${{ background: 'var(--line)' }}>
+        <${M.div} className="h-full rounded-full" style=${{ background: 'linear-gradient(90deg,#6366F1,#EC4899,#F59E0B)', width: pct + '%' }} initial=${false} animate=${{ width: pct + '%' }} transition=${{ type: 'spring', stiffness: 120, damping: 20 }} />
+      </div>
+    </div>
+    <${Heatmap} habits=${habits} log=${log} />
+    <${WeekStats} habits=${habits} log=${log} />
+    <ul className="mt-6 space-y-3">
+      <${AP} initial=${false}>
+      ${dueToday.map((h) => {
+        const on = done.includes(h.id), s = streak(h.id), c = colorOf(h);
+        return html`<${M.li} key=${h.id} layout initial=${{ opacity: 0, y: 8 }} animate=${{ opacity: 1, y: 0 }} exit=${{ opacity: 0, scale: .95 }} whileHover=${{ y: -2 }} className="card rounded-2xl flex items-center gap-3 p-2 pr-3" style=${{ borderLeft: '4px solid ' + c, backgroundImage: on ? 'linear-gradient(' + c + '1A,' + c + '1A)' : 'none' }}>
+          <${M.button} whileTap=${{ scale: .86 }} transition=${spring} onClick=${() => toggle(h.id)} className="flex flex-1 items-center gap-4 text-left p-2 rounded-xl" aria-pressed=${on} aria-label=${(on ? 'Uncheck ' : 'Check ') + h.name}>
+            <${M.span} animate=${{ scale: on ? [1, .8, 1.12, 1] : 1 }} transition=${{ duration: .35 }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-white" style=${on ? { background: c, borderColor: c } : { borderColor: c + '88' }}>
+              ${on && html`<${M.span} initial=${{ scale: 0 }} animate=${{ scale: 1 }} transition=${spring}><${Icon} n="check" s=${16} /><//>`}
+            <//>
+            <span className=${'font-medium transition-colors ' + (on ? 'muted line-through' : '')}>${h.emoji ? h.emoji + ' ' : ''}${h.name}</span>
+          <//>
+          ${s > 1 && html`<span className="text-xs rounded-full px-2.5 py-1 font-medium" style=${{ color: c, background: c + '1F' }}>${s}-day streak</span>`}
+          <button onClick=${() => setEditing(h.id)} className="muted p-2 rounded-xl transition-colors" aria-label=${'Edit ' + h.name}><${Icon} n="pen" s=${16} /></button>
+          <button onClick=${() => setHabits(habits.filter((x) => x.id !== h.id))} className="muted p-2 rounded-xl hover:text-red-500 transition-colors" aria-label=${'Delete ' + h.name}><${Icon} n="trash" s=${16} /></button>
+        <//>`;
+      })}
+      <//>
+    </ul>
+    ${!habits.length && html`<p className="muted text-center mt-10">No habits yet. Add your first one below.</p>`}
+    ${rest.length > 0 && html`<p className="muted text-xs mt-5">Not scheduled today: ${rest.map((h) => h.name).join(', ')}</p>`}
+    <${Confetti} stamp=${boom} />
+    <${AP}>${eh && html`<${HabitSheet} key=${eh.id} habit=${eh} onSave=${(nh) => { setHabits(habits.map((x) => (x.id === nh.id ? nh : x))); setEditing(null); }} onClose=${() => setEditing(null)} />`}<//>
+    <div className="card rounded-2xl flex items-center gap-2 p-2 mt-5">
+      <button onClick=${() => setPick((pick + 1) % PALETTE.length)} className="ml-1 h-8 w-8 shrink-0 rounded-full" style=${{ background: PALETTE[pick] }} aria-label="Change habit colour" />
+      <input value=${draft} onChange=${(e) => setDraft(e.target.value)} onKeyDown=${(e) => e.key === 'Enter' && add()} placeholder="New habit" className="flex-1 px-3 py-2 rounded-xl" />
+      <${M.button} whileHover=${{ scale: 1.05 }} whileTap=${{ scale: .92 }} onClick=${add} className="rounded-xl p-2.5 text-white" style=${{ background: PALETTE[pick] }} aria-label="Add habit"><${Icon} n="plus" /><//>
+    </div>
+  </div>`;
+}
+
+const MODES = { focus: { label: 'Focus', mins: 25, color: '#EC4899' }, break: { label: 'Break', mins: 5, color: '#10B981' } };
+function TimerView({ habits, focusLog, setFocusLog }) {
+  const [mode, setMode] = useState('focus');
+  const [left, setLeft] = useState(MODES.focus.mins * 60);
+  const [running, setRunning] = useState(false);
+  const [linked, setLinked] = useState('');
+  const endAt = useRef(0);
+  const total = MODES[mode].mins * 60;
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => {
+      const l = Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000));
+      setLeft(l);
+      if (l === 0) {
+        beep(); notify(mode === 'focus' ? 'Focus session done' : 'Break is over', mode === 'focus' ? 'Nice work. Time for a short break.' : 'Ready for another round?');
+        setRunning(false);
+        if (mode === 'focus') { const k = dayKey(), day = focusLog[k] || {}, id = linked || 'free'; setFocusLog({ ...focusLog, [k]: { ...day, [id]: (day[id] || 0) + MODES.focus.mins } }); }
+        const next = mode === 'focus' ? 'break' : 'focus'; setMode(next); setLeft(MODES[next].mins * 60);
+      }
+    }, 250);
+    return () => clearInterval(t);
+  }, [running, mode, linked, focusLog]);
+  const toggle = () => { if (!running) endAt.current = Date.now() + left * 1000; setRunning(!running); };
+  const reset = () => { setRunning(false); setLeft(total); };
+  const pick = (m) => { setMode(m); setRunning(false); setLeft(MODES[m].mins * 60); };
+  const C = 2 * Math.PI * 110, mm = String(Math.floor(left / 60)).padStart(2, '0'), ss = String(left % 60).padStart(2, '0');
+  const todayMins = Object.values(focusLog[dayKey()] || {}).reduce((a, b) => a + b, 0);
+  return html`<div className="flex flex-col items-center">
+    <h1 className="text-3xl font-bold tracking-tight self-start">Focus</h1>
+    <div className="card rounded-2xl p-1 flex mt-6 relative">
+      ${Object.keys(MODES).map((m) => html`<button key=${m} onClick=${() => pick(m)} className=${'relative z-10 px-5 py-2 rounded-xl text-sm font-medium transition-colors ' + (mode === m ? 'text-white' : 'muted')} style=${mode === m ? { background: MODES[m].color } : {}}>${MODES[m].label}</button>`)}
+    </div>
+    <div className="relative mt-10" style=${{ width: 260, height: 260 }}>
+      <svg width="260" height="260" viewBox="0 0 260 260" style=${{ transform: 'rotate(-90deg)' }}>
+        <circle cx="130" cy="130" r="110" fill="none" stroke="var(--line)" stroke-width="10" />
+        <circle cx="130" cy="130" r="110" fill="none" stroke=${MODES[mode].color} stroke-width="10" stroke-linecap="round" stroke-dasharray=${C} stroke-dashoffset=${C * (1 - left / total)} style=${{ transition: 'stroke-dashoffset .3s linear' }} />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-6xl font-semibold tabular-nums tracking-tight">${mm}:${ss}</span>
+        <span className="muted text-sm mt-1">${MODES[mode].label} session</span>
+      </div>
+    </div>
+    <div className="flex gap-3 mt-10">
+      <${M.button} whileHover=${{ scale: 1.05 }} whileTap=${{ scale: .92 }} transition=${spring} onClick=${toggle} className="text-white rounded-2xl px-8 py-3.5 flex items-center gap-2 font-medium shadow-md" style=${{ background: MODES[mode].color }}><${Icon} n=${running ? 'pause' : 'play'} />${running ? 'Pause' : 'Start'}<//>
+      <${M.button} whileHover=${{ scale: 1.05 }} whileTap=${{ scale: .92 }} transition=${spring} onClick=${reset} className="card rounded-2xl p-3.5" aria-label="Reset timer"><${Icon} n="reset" /><//>
+    </div>
+    <div className="card rounded-2xl w-full p-4 mt-10 flex items-center gap-3">
+      <span className="muted text-sm">Link to habit</span>
+      <select value=${linked} onChange=${(e) => setLinked(e.target.value)} className="flex-1 text-right text-sm font-medium">
+        <option value="">None</option>${habits.map((h) => html`<option key=${h.id} value=${h.id}>${h.name}</option>`)}
+      </select>
+    </div>
+    <p className="muted text-sm mt-4">${todayMins} min focused today</p>
+  </div>`;
+}
+
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function renderMd(src) {
+  const inline = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
+  return src.split('\n').map((l) => /^#{1,2} /.test(l) ? `<h1>${inline(l.replace(/^#+ /, ''))}</h1>` : /^[-*] /.test(l) ? `<li>${inline(l.slice(2))}</li>` : l.trim() ? `<p>${inline(l)}</p>` : '').join('');
+}
+function Journal({ notes, setNotes }) {
+  const k = dayKey(), text = notes[k] || '';
+  const [preview, setPreview] = useState(false);
+  return html`<div>
+    <div className="flex items-end justify-between">
+      <div><p className="muted text-sm">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p><h1 className="text-3xl font-bold tracking-tight mt-1">Journal</h1></div>
+      <${M.button} whileHover=${{ scale: 1.05 }} whileTap=${{ scale: .92 }} onClick=${() => setPreview(!preview)} className="card rounded-xl p-2.5" aria-label=${preview ? 'Edit' : 'Preview'}><${Icon} n=${preview ? 'pen' : 'eye'} /><//>
+    </div>
+    <div className="card rounded-2xl mt-6 p-5 min-h-[50vh]">
+      ${preview
+        ? html`<div className="md leading-relaxed" dangerouslySetInnerHTML=${{ __html: renderMd(text) || '<p class="muted">Nothing written yet.</p>' }} />`
+        : html`<textarea value=${text} onChange=${(e) => setNotes({ ...notes, [k]: e.target.value })} placeholder="How did today go? Use # for headings, - for lists, **bold** and *italic*." className="w-full h-[46vh] resize-none leading-relaxed" />`}
+    </div>
+  </div>`;
+}
+
+/* ---------- Main App Shell ---------- */
+const TABS = [{ id: 'today', label: 'Today', icon: 'home', color: '#6366F1' }, { id: 'timer', label: 'Focus', icon: 'timer', color: '#EC4899' }, { id: 'journal', label: 'Journal', icon: 'book', color: '#F59E0B' }];
+function App() {
+  const [tab, setTab] = useState('today');
+  const [habits, setHabits] = useLS('ht:habits', SEED);
+  const [log, setLog] = useLS('ht:log', {});
+  const [notes, setNotes] = useLS('ht:notes', {});
+  const [focusLog, setFocusLog] = useLS('ht:focus', {});
+  const [backup, setBackup] = useState(false);
+  const [name, setName] = useLS('ht:name', '');
+  const [theme, setTheme] = useLS('ht:theme', 'auto');
+  const mode = theme === 'auto' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
+  useEffect(() => { document.documentElement.setAttribute('data-theme', mode); }, [mode]);
+  if (!name) return html`<${Welcome} onDone=${setName} />`;
+  const view = tab === 'today' ? html`<${Dashboard} habits=${habits} setHabits=${setHabits} log=${log} setLog=${setLog} name=${name} />`
+    : tab === 'timer' ? html`<${TimerView} habits=${habits} focusLog=${focusLog} setFocusLog=${setFocusLog} />`
+    : html`<${Journal} notes=${notes} setNotes=${setNotes} />`;
+  const NavBtn = ({ t, side }) => html`<button onClick=${() => setTab(t.id)} className=${'relative flex items-center gap-3 rounded-2xl transition-colors ' + (side ? 'px-4 py-3 w-full ' : 'flex-col flex-1 py-2 text-xs ') + (tab === t.id ? '' : 'muted')} style=${tab === t.id ? { color: t.color } : {}}>
+    ${tab === t.id && html`<${M.div} layoutId=${side ? 'pill-side' : 'pill-bottom'} transition=${spring} className="absolute inset-0 rounded-2xl" style=${{ background: t.color + '22' }} />`}
+    <span className="relative flex items-center gap-3 flex-col md:flex-row"><${Icon} n=${t.icon} />${html`<span className="font-medium">${t.label}</span>`}</span>
+  </button>`;
+  return html`<div className="min-h-screen md:flex">
+    <aside className="hidden md:flex flex-col gap-2 w-60 shrink-0 p-6 sticky top-0 h-screen border-r line">
+      <div className="text-lg font-bold tracking-tight px-4 py-3">Habits</div>
+      ${TABS.map((t) => html`<${NavBtn} key=${t.id} t=${t} side=${true} />`)}
+    </aside>
+    <main className="flex-1 w-full max-w-xl mx-auto px-5 pt-8 pb-32 md:pb-16 md:pt-12">
+      <${AP} mode="wait" initial=${false}>
+        <${M.div} key=${tab} initial=${{ opacity: 0, y: 14 }} animate=${{ opacity: 1, y: 0 }} exit=${{ opacity: 0, y: -10 }} transition=${{ duration: .22, ease: 'easeOut' }}>${view}<//>
+      <//>
+      <div className="mt-10 flex flex-wrap items-center gap-3 text-xs muted">
+        <button onClick=${() => setBackup(true)} className="card flex items-center gap-1.5 rounded-xl px-3 py-2 transition-colors"><${Icon} n="download" s=${14} />Backup and restore</button>
+        <button onClick=${() => setName('')} className="card rounded-xl px-3 py-2">Change name</button>
+        <div className="card flex rounded-xl p-0.5" role="group" aria-label="Theme">${['light', 'dark'].map((m) => html`<button key=${m} onClick=${() => setTheme(m)} aria-pressed=${mode === m} className=${'flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 transition-colors ' + (mode === m ? 'accent-bg' : '')}><${Icon} n=${m === 'light' ? 'sun' : 'moon'} s=${14} />${m === 'light' ? 'Light' : 'Dark'}</button>`)}</div>
+      </div>
+      <${AP}>${backup && html`<${BackupSheet} data=${{ habits, log, notes, focus: focusLog }} apply=${(o) => { setHabits(o.habits); setLog(o.log \vert{}\vert{} {}); setNotes(o.notes \vert{}\vert{} {}); setFocusLog(o.focus \vert{}\vert{} {}); }} onClose=${() => setBackup(false)} />`}<//>
+    </main>
+    <nav className="md:hidden fixed bottom-0 inset-x-0 p-3" style=${{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + .75rem)' }}>
+      <div className="card rounded-3xl flex p-1.5 max-w-sm mx-auto" style=${{ backdropFilter: 'blur(14px)' }}>${TABS.map((t) => html`<${NavBtn} key=${t.id} t=${t} side=${false} />`)}</div>
+    </nav>
+  </div>`;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+</script>
+</body>
+</html>
