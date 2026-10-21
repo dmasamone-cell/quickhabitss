@@ -3,22 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Improve Your Habits</title>
-
-<!-- PWA & Mobile Settings -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#101012">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="icon" type="image/png" href="icon.png">
-
-<!-- CDN Scripts -->
+<title>Habit Tracker</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/framer-motion@10.18.0/dist/framer-motion.js"></script>
-
 <style>
   :root { --bg:#FAFAFA; --ink:#171717; --muted:#737373; --card:#FFFFFF; --line:#E5E5E5; --accent:#4F46E5; --accent-soft:#EEF2FF;
     box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
@@ -43,21 +33,11 @@
 </head>
 <body>
 <div id="root"></div>
-
-<script>
-// Register Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW reg error:', err));
-  });
-}
-</script>
-
 <script>
 const { useState, useEffect, useRef, useMemo } = React;
 const html = htm.bind(React.createElement);
 
-/* ---------- Framer Motion ---------- */
+/* ---------- Framer Motion (falls back to plain elements if the bundle is unavailable) ---------- */
 const FM = window.Motion || window.Framer || window.FramerMotion || {};
 const strip = ({ initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, variants, ...r }) => r;
 const mk = (tag) => (FM.motion && FM.motion[tag]) || ((p) => React.createElement(tag, strip(p)));
@@ -65,7 +45,7 @@ const M = { div: mk('div'), button: mk('button'), li: mk('li'), span: mk('span')
 const AP = FM.AnimatePresence || (({ children }) => children);
 const spring = { type: 'spring', stiffness: 420, damping: 24 };
 
-/* ---------- Icons ---------- */
+/* ---------- Minimal icon set (Lucide-style 24px strokes) ---------- */
 const P = {
   check: 'M20 6 9 17l-5-5', plus: 'M5 12h14M12 5v14', trash: 'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
   home: 'M3 12 12 3l9 9M5 10v10h14V10', timer: 'M12 9v4l2 2M10 2h4M12 5a8 8 0 1 0 0 16 8 8 0 0 0 0-16', book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5',
@@ -88,11 +68,12 @@ const PALETTE = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#8B5CF6
 const colorOf = (h) => h.color || PALETTE[[...h.id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % PALETTE.length];
 const EMOJI = ['', '💧', '📚', '🏃', '🧘', '🥗', '💤', '✍️', '🎯'];
 const DAYN = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+// A habit with no `days` repeats daily. dayStat = completion of the habits scheduled on that date.
 const due = (h, d) => !h.days || h.days.includes(d.getDay());
 const dayStat = (habits, log, d) => { const ids = log[dayKey(d)] || [], list = habits.filter((h) => due(h, d)), done = list.filter((h) => ids.includes(h.id)).length; return { due: list.length, done, pct: list.length ? Math.round((done / list.length) * 100) : 0 }; };
 const SEED = [{ id: 'h1', name: 'Drink water' }, { id: 'h2', name: 'Read 20 pages' }, { id: 'h3', name: 'Stretch for 10 minutes' }, { id: 'h4', name: 'Plan tomorrow' }];
 
-/* ---------- Sheets, Confetti & Stats ---------- */
+/* ---------- Sheets, confetti, weekly stats ---------- */
 function Sheet({ onClose, children }) {
   return html`<${M.div} className="fixed inset-0 z-40 flex items-end justify-center p-4 md:items-center" initial=${{ opacity: 0 }} animate=${{ opacity: 1 }} exit=${{ opacity: 0 }}>
     <div className="absolute inset-0 bg-black/40" onClick=${onClose} />
@@ -107,7 +88,7 @@ function HabitSheet({ habit, onSave, onClose }) {
     <h2 className="text-lg font-semibold">Edit habit</h2>
     <input value=${name} onChange=${(e) => setName(e.target.value)} className="mt-4 w-full rounded-xl border line px-3 py-2.5" />
     <p className="muted text-xs mt-5">Icon</p>
-    <div className="flex flex-wrap gap-2 mt-2">${EMOJI.map((e) => html`<button key=${e \vert{}\vert{} 'none'} onClick=${() => setEmoji(e)} className="h-9 w-9 rounded-xl border line text-base" style=${emoji === e ? { borderColor: color, background: color + '22' } : {}}>${e || '–'}</button>`)}</div>
+    <div className="flex flex-wrap gap-2 mt-2">${EMOJI.map((e) => html`<button key=${e || 'none'} onClick=${() => setEmoji(e)} className="h-9 w-9 rounded-xl border line text-base" style=${emoji === e ? { borderColor: color, background: color + '22' } : {}}>${e || '–'}</button>`)}</div>
     <p className="muted text-xs mt-5">Repeat on</p>
     <div className="flex gap-2 mt-2">${DAYN.map((n, i) => html`<button key=${i} onClick=${() => tog(i)} className=${'h-9 w-9 rounded-full text-sm font-medium ' + (days.includes(i) ? 'text-white' : 'muted border line')} style=${days.includes(i) ? { background: color } : {}}>${n}</button>`)}</div>
     <p className="muted text-xs mt-5">Colour</p>
@@ -115,13 +96,14 @@ function HabitSheet({ habit, onSave, onClose }) {
     <div className="flex gap-3 mt-7"><button onClick=${onClose} className="flex-1 rounded-2xl border line py-3 font-medium">Cancel</button><button onClick=${save} className="flex-1 rounded-2xl py-3 font-medium text-white" style=${{ background: color }}>Save</button></div>
   <//>`;
 }
+// Files cannot be downloaded from a published page, so backup is copy/paste JSON.
 function BackupSheet({ data, apply, onClose }) {
   const [text, setText] = useState(JSON.stringify(data, null, 1)), [msg, setMsg] = useState('');
-  const copy = async () => { try { await navigator.clipboard.writeText(text); setMsg('Copied'); } catch (e) { setMsg('Select text and copy manually'); } };
-  const restore = () => { try { const o = JSON.parse(text); if (!Array.isArray(o.habits)) throw new Error(); apply(o); onClose(); } catch (e) { setMsg('Invalid backup data'); } };
+  const copy = async () => { try { await navigator.clipboard.writeText(text); setMsg('Copied'); } catch (e) { setMsg('Select the text and copy it manually'); } };
+  const restore = () => { try { const o = JSON.parse(text); if (!Array.isArray(o.habits)) throw new Error('bad'); apply(o); onClose(); } catch (e) { setMsg('That is not a valid backup'); } };
   return html`<${Sheet} onClose=${onClose}>
     <h2 className="text-lg font-semibold">Backup and restore</h2>
-    <p className="muted text-sm mt-1">Copy this text to save your data, or paste back to restore.</p>
+    <p className="muted text-sm mt-1">Copy this text and keep it somewhere safe. To restore, paste a backup here and press Restore.</p>
     <textarea value=${text} onChange=${(e) => setText(e.target.value)} className="mt-4 h-48 w-full resize-none rounded-xl border line p-3 font-mono text-xs" />
     <p className="muted mt-2 h-4 text-xs">${msg}</p>
     <div className="flex gap-3 mt-4"><button onClick=${copy} className="flex-1 rounded-2xl border line py-3 font-medium">Copy</button><button onClick=${restore} className="accent-bg flex-1 rounded-2xl py-3 font-medium">Restore</button></div>
@@ -132,7 +114,7 @@ function Confetti({ stamp }) {
   useEffect(() => { if (!stamp || REDUCED) return; setOn(true); const t = setTimeout(() => setOn(false), 1800); return () => clearTimeout(t); }, [stamp]);
   if (!on) return null;
   return html`<div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">${Array.from({ length: 44 }, (_, i) => { const a = Math.random() * Math.PI * 2, r = 100 + Math.random() * 240;
-    return html`<${M.span} key=${i} className="absolute left-1/2 top-1/3 block h-2.5 w-2 rounded-sm" style=${{ background: PALETTE[i \% PALETTE.length] }} initial=${{ x: 0, y: 0, opacity: 1, rotate: 0 }} animate=${{ x: Math.cos(a) * r, y: Math.sin(a) * r + 260, opacity: 0, rotate: Math.random() * 720 }} transition=${{ duration: 1.5, ease: 'easeOut' }} />`; })}</div>`;
+    return html`<${M.span} key=${i} className="absolute left-1/2 top-1/3 block h-2.5 w-2 rounded-sm" style=${{ background: PALETTE[i % PALETTE.length] }} initial=${{ x: 0, y: 0, opacity: 1, rotate: 0 }} animate=${{ x: Math.cos(a) * r, y: Math.sin(a) * r + 260, opacity: 0, rotate: Math.random() * 720 }} transition=${{ duration: 1.5, ease: 'easeOut' }} />`; })}</div>`;
 }
 function WeekStats({ habits, log }) {
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return { d, ...dayStat(habits, log, d) }; });
@@ -142,16 +124,18 @@ function WeekStats({ habits, log }) {
     <div className="flex items-baseline justify-between"><span className="text-sm font-medium">Last 7 days</span><span className="text-sm muted">${Math.round(days.reduce((a, x) => a + x.pct, 0) / 7)}% average</span></div>
     <div className="flex items-end gap-2 h-20 mt-5">${days.map((x, i) => html`<div key=${i} className="flex h-full flex-1 items-end"><${M.div} className="w-full rounded-lg" initial=${{ height: 0 }} animate=${{ height: Math.max(x.pct, 6) + '%' }} transition=${{ type: 'spring', stiffness: 120, damping: 18, delay: i * .04 }} style=${{ background: x.pct ? colorOf({ id: 'd' + x.d.getDay() }) : 'var(--line)' }} /></div>`)}</div>
     <div className="flex gap-2 mt-2">${days.map((x, i) => html`<span key=${i} className="muted flex-1 text-center text-[10px]">${x.d.toLocaleDateString('en-US', { weekday: 'narrow' })}</span>`)}</div>
-    ${best.pct > 0 && html`<p className="muted mt-4 text-sm">Best day: ${best.d.toLocaleDateString('en-US', { weekday: 'long' })} at ${best.pct}\%${cons ? '. Most consistent: ' + (cons.h.emoji ? cons.h.emoji + ' ' : '') + cons.h.name + ', ' + cons.n + ' of ' + cons.t + ' days' : ''}.</p>`}
+    ${best.pct > 0 && html`<p className="muted mt-4 text-sm">Best day: ${best.d.toLocaleDateString('en-US', { weekday: 'long' })} at ${best.pct}%${cons ? '. Most consistent: ' + (cons.h.emoji ? cons.h.emoji + ' ' : '') + cons.h.name + ', ' + cons.n + ' of ' + cons.t + ' days' : ''}.</p>`}
   </div>`;
 }
+// Notifications go through the service worker when there is one (required on Android Chrome).
 async function notify(title, body) {
   try {
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const reg = navigator.serviceWorker && (await navigator.serviceWorker.getRegistration());
-    if (reg) reg.showNotification(title, { body, icon: '/icon.png' }); else new Notification(title, { body });
+    if (reg) reg.showNotification(title, { body, icon: '/icon-192.png', badge: '/icon-192.png' }); else new Notification(title, { body });
   } catch (e) {}
 }
+// First-run screen: name, then a notification permission prompt (it must come from a tap).
 function Welcome({ onDone }) {
   const [step, setStep] = useState(0), [name, setName] = useState('');
   const canNotify = typeof Notification !== 'undefined', n = name.trim();
@@ -180,8 +164,9 @@ function Welcome({ onDone }) {
 }
 function beep() { try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 660; g.gain.setValueAtTime(.15, c.currentTime); g.gain.exponentialRampToValueAtTime(.001, c.currentTime + .8); o.start(); o.stop(c.currentTime + .8); } catch (e) {} }
 
-/* ---------- Streak & Heatmap ---------- */
+/* ---------- Fire streak ---------- */
 const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// A day counts when at least one current habit is checked. Today never breaks the streak until the day is over.
 function Streak({ habits, log }) {
   const { current, best, todayDone } = useMemo(() => {
     const ids = new Set(habits.map((h) => h.id));
@@ -212,13 +197,16 @@ function Streak({ habits, log }) {
     </div>
   </div>`;
 }
+
+/* ---------- Monthly activity heatmap ---------- */
+// Each day's completion % = habits checked that day / habits that exist now, mapped to 5 green levels.
 function Heatmap({ habits, log }) {
   const [active, setActive] = useState(null);
   const now = new Date(), y = now.getFullYear(), mo = now.getMonth(), todayKey = dayKey(now);
   const count = new Date(y, mo + 1, 0).getDate(), offset = new Date(y, mo, 1).getDay();
   const days = useMemo(() => Array.from({ length: count }, (_, i) => {
-    const d = new Date(y, mo, i + 1), k = dayKey(d);
-    const st = dayStat(habits, log, d);
+    const d = new Date(y, mo, i + 1), k = dayKey(d), ids = log[k] || [];
+    const st = dayStat(habits, log, d), done = st.done;
     const pct = st.pct;
     return { d, k, pct, future: k > todayKey, level: pct === 0 ? 0 : pct <= 25 ? 1 : pct <= 50 ? 2 : pct <= 75 ? 3 : 4 };
   }), [habits, log, y, mo, count, todayKey]);
@@ -255,7 +243,7 @@ function Heatmap({ habits, log }) {
   </div>`;
 }
 
-/* ---------- Views ---------- */
+/* ---------- Dashboard ---------- */
 function Dashboard({ habits, setHabits, log, setLog, name }) {
   const today = dayKey();
   const done = log[today] || [];
@@ -315,6 +303,7 @@ function Dashboard({ habits, setHabits, log, setLog, name }) {
   </div>`;
 }
 
+/* ---------- Focus timer ---------- */
 const MODES = { focus: { label: 'Focus', mins: 25, color: '#EC4899' }, break: { label: 'Break', mins: 5, color: '#10B981' } };
 function TimerView({ habits, focusLog, setFocusLog }) {
   const [mode, setMode] = useState('focus');
@@ -371,6 +360,7 @@ function TimerView({ habits, focusLog, setFocusLog }) {
   </div>`;
 }
 
+/* ---------- Journal ---------- */
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 function renderMd(src) {
   const inline = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
@@ -392,7 +382,7 @@ function Journal({ notes, setNotes }) {
   </div>`;
 }
 
-/* ---------- Main App Shell ---------- */
+/* ---------- App shell ---------- */
 const TABS = [{ id: 'today', label: 'Today', icon: 'home', color: '#6366F1' }, { id: 'timer', label: 'Focus', icon: 'timer', color: '#EC4899' }, { id: 'journal', label: 'Journal', icon: 'book', color: '#F59E0B' }];
 function App() {
   const [tab, setTab] = useState('today');
@@ -422,12 +412,12 @@ function App() {
       <${AP} mode="wait" initial=${false}>
         <${M.div} key=${tab} initial=${{ opacity: 0, y: 14 }} animate=${{ opacity: 1, y: 0 }} exit=${{ opacity: 0, y: -10 }} transition=${{ duration: .22, ease: 'easeOut' }}>${view}<//>
       <//>
-      <div className="mt-10 flex flex-wrap items-center gap-3 text-xs muted">
+    <div className="mt-10 flex flex-wrap items-center gap-3 text-xs muted">
         <button onClick=${() => setBackup(true)} className="card flex items-center gap-1.5 rounded-xl px-3 py-2 transition-colors"><${Icon} n="download" s=${14} />Backup and restore</button>
         <button onClick=${() => setName('')} className="card rounded-xl px-3 py-2">Change name</button>
         <div className="card flex rounded-xl p-0.5" role="group" aria-label="Theme">${['light', 'dark'].map((m) => html`<button key=${m} onClick=${() => setTheme(m)} aria-pressed=${mode === m} className=${'flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 transition-colors ' + (mode === m ? 'accent-bg' : '')}><${Icon} n=${m === 'light' ? 'sun' : 'moon'} s=${14} />${m === 'light' ? 'Light' : 'Dark'}</button>`)}</div>
       </div>
-      <${AP}>${backup && html`<${BackupSheet} data=${{ habits, log, notes, focus: focusLog }} apply=${(o) => { setHabits(o.habits); setLog(o.log \vert{}\vert{} {}); setNotes(o.notes \vert{}\vert{} {}); setFocusLog(o.focus \vert{}\vert{} {}); }} onClose=${() => setBackup(false)} />`}<//>
+      <${AP}>${backup && html`<${BackupSheet} data=${{ habits, log, notes, focus: focusLog }} apply=${(o) => { setHabits(o.habits); setLog(o.log || {}); setNotes(o.notes || {}); setFocusLog(o.focus || {}); }} onClose=${() => setBackup(false)} />`}<//>
     </main>
     <nav className="md:hidden fixed bottom-0 inset-x-0 p-3" style=${{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + .75rem)' }}>
       <div className="card rounded-3xl flex p-1.5 max-w-sm mx-auto" style=${{ backdropFilter: 'blur(14px)' }}>${TABS.map((t) => html`<${NavBtn} key=${t.id} t=${t} side=${false} />`)}</div>
